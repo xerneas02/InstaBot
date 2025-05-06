@@ -1,0 +1,9 @@
+matplotlib
+geopy
+numpy
+opencv-python
+Pillow
+pyowm
+instagrapi
+requests
+scikit-image
