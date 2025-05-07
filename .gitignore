@@ -5,4 +5,5 @@ log.txt
 co2.txt
 .cache.sqlite
 *.pyc
+*.cpython-310.pyc
 .venv/

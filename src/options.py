@@ -1,0 +1,2 @@
+WHEATHER = False
+PUBLISH = False

@@ -13,9 +13,9 @@ import os
 import glob
 import tiny_planet as tiny
 import meteo
+from options import WHEATHER
 
 GoogleKey = os.getenv("GOOGLE_KEY")
-WHEATHER = True
 
 
 def start(debug):
@@ -28,8 +28,8 @@ def start(debug):
     while good:
         debug.write("Debut de boucle :\n")
         # Choix aléatoire de coordonnées
-        lat = 55.56493000000002#random.randint(-9000000, 9000000) / 100000
-        lon = 37.47615000000006#random.randint(-18000000, 18000000) / 100000
+        lat = random.randint(-9000000, 9000000) / 100000
+        lon = random.randint(-18000000, 18000000) / 100000
         debug.write(f"Coordonnées de départ : {lat}, {lon}\n")
         loc = []
 
@@ -61,9 +61,11 @@ def start(debug):
             font_size = 40
             # On essaie d'utiliser Arial, sinon on revient à une police par défaut
             try:
-                font = ImageFont.truetype('arial.ttf', font_size)
+                font = ImageFont.truetype('assets/fonts/American Captain.ttf', font_size)
+                print("Font loaded")
             except OSError:
                 font = ImageFont.load_default()
+                print("Font not loaded")
                         # Positionner à votre convenance
             draw.text((15, 15), text_desc, fill=(15,15,15), font=font)
             draw.text((15, 15+font_size+5), text_temp, fill=(15,15,15), font=font)
