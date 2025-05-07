@@ -5,3 +5,4 @@ log.txt
 co2.txt
 .cache.sqlite
 *.pyc
+.venv/
