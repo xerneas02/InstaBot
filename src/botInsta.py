@@ -38,7 +38,7 @@ try:
             loc = loc[:len(loc)-2]
             debug.write("location = {}\n".format(loc))
 
-            if POST:
+            if PUBLISH:
                 bot = Client()
                 bot.login(login, password)
                 debug.write("Bot log in!\n")
