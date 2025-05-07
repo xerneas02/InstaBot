@@ -22,6 +22,7 @@ class ImageGenerator:
         os.makedirs(self.output_dir, exist_ok=True)
 
     def get_random_coordinates(self):
+<<<<<<< HEAD
         while True :
             lat = random.randint(-9000000, 9000000) / 100000
             lon = random.randint(-18000000, 18000000) / 100000
@@ -32,11 +33,17 @@ class ImageGenerator:
                 _, lat, lon = result
                 self.logger.debug(f"Coordinates found: {lat}, {lon}")
                 return lat, lon
+=======
+        lat = random.randint(-9000000, 9000000) / 100000
+        lon = random.randint(-18000000, 18000000) / 100000
+        return lat, lon
+>>>>>>> logging
 
     def reverse_geocode(self, lat, lon):
         locator = Nominatim(user_agent="myGeocoder")
         location = locator.reverse(f"{lat}, {lon}", exactly_one=True)
         address = location.raw.get('address', {})
+<<<<<<< HEAD
 
         try:
             locator = Nominatim(user_agent="myGeocoder")
@@ -54,6 +61,9 @@ class ImageGenerator:
             state   = "Unkown"
             self.logger.warning("Location error, coordinates unknown.")
             return "Unkown", "Unkown", "Unkown"
+=======
+        return address.get('country', ''), address.get('state', ''), address.get('city', '')
+>>>>>>> logging
 
     def get_weather_image(self, lat, lon):
         temperature, weather_desc = meteo.get_temp_and_weather(lat, lon)
