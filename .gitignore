@@ -7,3 +7,4 @@ co2.txt
 *.pyc
 *.cpython-310.pyc
 .venv/
+.log
