@@ -37,7 +37,7 @@ texte = (
 print(texte)
 # --- 2) Génère un bar chart dans un buffer (toutes légendes en blanc) ---
 labels = ["1 sem.", "2 sem.", "1 an", "10 ans"]
-values = [v_prev, v_now, v_1yr, v_10yr]
+values = [v_now, v_prev, v_1yr, v_10yr]
 fig, ax = plt.subplots(figsize=(4,3), dpi=100, facecolor='none')
 bars = ax.bar(labels, values, color="#FFA500")
 for b in bars:
