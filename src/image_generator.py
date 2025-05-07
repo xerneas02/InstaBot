@@ -29,31 +29,60 @@ class ImageGenerator:
 
             result = StreetViewDownloader.find_nearest_panorama(lat=lat, lon=lon, API_KEY=self.google_key)
             if result != None:
-                _, lat, lon = result
+                pano_id, lat, lon = result
                 self.logger.debug(f"Coordinates found: {lat}, {lon}")
-                return lat, lon
+                return pano_id, lat, lon
 
     def reverse_geocode(self, lat, lon):
-        locator = Nominatim(user_agent="myGeocoder")
-        location = locator.reverse(f"{lat}, {lon}", exactly_one=True)
-        address = location.raw.get('address', {})
+        """
+        Tentative de reverse geocoding sur le point donné, puis sur ses voisins si échec.
+        Retourne (country, state, city) ou ('Unknown','Unknown','Unknown') si toutes tentatives échouent.
+        """
+        from geopy.geocoders import Nominatim
+        from geopy.exc import GeocoderTimedOut
 
-        try:
-            locator = Nominatim(user_agent="myGeocoder")
-            location = locator.reverse(f"{lat}, {lon}", exactly_one=True)
-            address = location.raw.get('address', {})
-            country = address.get('country', '')
-            city    = address.get('city', '')
-            state   = address.get('state', '')
-            debug.write(f"Localisation trouvée : {country}, {state}, {city}\n")
-            self.logger.info(f"Location found: {country}, {state}, {city}")
-            return country, state, city
-        except:
-            country = "Unkown"
-            city    = "Unkown"
-            state   = "Unkown"
-            self.logger.warning("Location error, coordinates unknown.")
-            return "Unkown", "Unkown", "Unkown"
+        locator = Nominatim(user_agent="myGeocoder")
+        # Offsets en degrés (~111m latitude) pour tester autour
+        offsets = [
+            (0, 0),
+            (0.001, 0), (-0.001, 0),
+            (0, 0.001), (0, -0.001),
+            (0.001, 0.001), (0.001, -0.001),
+            (-0.001, 0.001), (-0.001, -0.001),
+        ]
+
+        for dx, dy in offsets:
+            try:
+                lat_i = lat + dx
+                lon_i = lon + dy
+                location = locator.reverse(f"{lat_i}, {lon_i}", exactly_one=True, timeout=10)
+                if location and hasattr(location, 'raw'):
+                    addr = location.raw.get('address', {})
+                    country = addr.get('country', '')
+                    # Plusieurs clés possibles pour ville/région
+                    city  = addr.get('city')  or addr.get('town')    or ''
+                    state = addr.get('state') or addr.get('region')  or ''
+                    self.logger.info(f"Location found: {country}, {state}, {city}")
+                    return country, state, city
+            except GeocoderTimedOut:
+                # On réessaie le même offset une fois
+                try:
+                    location = locator.reverse(f"{lat_i}, {lon_i}", exactly_one=True, timeout=10)
+                    if location and hasattr(location, 'raw'):
+                        addr = location.raw.get('address', {})
+                        country = addr.get('country', '')
+                        city  = addr.get('city')  or addr.get('town')   or ''
+                        state = addr.get('state') or addr.get('region') or ''
+                        self.logger.info(f"Location found (retry): {country}, {state}, {city}")
+                        return country, state, city
+                except Exception:
+                    continue
+            except Exception:
+                continue
+
+        # Si aucune tentative ne réussit
+        self.logger.warning("Location error: all reverse geocode attempts failed.")
+        return None
 
     def get_weather_image(self, lat, lon):
         temperature, weather_desc = meteo.get_temp_and_weather(lat, lon)
@@ -146,17 +175,16 @@ class ImageGenerator:
 
         while True:
             try:
-                lat, lon = self.get_random_coordinates()
+                panoid, lat, lon = self.get_random_coordinates()
                 self.logger.debug(f"Random coordinates: {lat}, {lon}")
 
-                panoids, lat, lon = StreetViewDownloader.panoids(lat=lat, lon=lon)
-                if not panoids:
-                    self.logger.warning("No panoids found, retrying...")
-                    continue
-
-                panoid = panoids[0]['panoid']
                 self.logger.debug(f"Using panoid: {panoid}")
-                country, state, city = self.reverse_geocode(lat, lon)
+                result = self.reverse_geocode(lat, lon)
+
+                if result is None:
+                    continue
+                
+                country, state, city = result
 
                 if WHEATHER:
                     self.get_weather_image(lat, lon)
@@ -164,11 +192,13 @@ class ImageGenerator:
                 images = self.download_flat_images(panoid)
                 panorama = self.stitch_images(images)
                 self.create_panorama_versions(panorama)
-                best_img, path = self.create_best_image(panoid)
+                
+                #best_img = self.create_best_image(panoid)
 
-                if best_img:
-                    self.logger.debug("Image generation complete")
-                    return round(lat, 5), round(lon, 5), [country, state, city], path
+                path = panoid + "_"
+
+                self.logger.debug("Image generation complete")
+                return round(lat, 5), round(lon, 5), [country, state, city], path
 
             except Exception as e:
                 self.logger.error(f"Exception in image generation: {e}")
