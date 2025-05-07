@@ -145,7 +145,7 @@ class InstagramBot:
                         f"Image/{path}270.jpg"
                     ]
 
-                    #self.upload_post(album_path, caption)
+                    self.upload_post(album_path, caption)
 
                     # save images to a folder
                     for image_path in album_path:
