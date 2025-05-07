@@ -48,20 +48,40 @@ def start(debug):
         debug.write(f"Coordonnées ajustées : {lat}, {lon}\n")
 
         # Reverse geocoding
-        try:
-            locator = Nominatim(user_agent="myGeocoder")
-            location = locator.reverse(f"{lat}, {lon}", exactly_one=True)
-            address = location.raw.get('address', {})
-            country = address.get('country', '')
-            city    = address.get('city', '')
-            state   = address.get('state', '')
-            debug.write(f"Localisation trouvée : {country}, {state}, {city}\n")
-        except:
-            country = "Unkown"
-            city    = "Unkown"
-            state   = "Unkown"
+        locator = Nominatim(user_agent="myGeocoder")
+        offsets = [
+            (0,0),
+            (0.001,0), (-0.001,0),
+            (0,0.001), (0,-0.001),
+            (0.001,0.001), (0.001,-0.001),
+            (-0.001,0.001), (-0.001,-0.001),
+        ]
+        found = False
+
+        for dx, dy in offsets:
+            try:
+                loc_obj = locator.reverse(f"{lat+dx}, {lon+dy}", exactly_one=True, timeout=10)
+                if loc_obj and hasattr(loc_obj, 'raw'):
+                    addr = loc_obj.raw.get('address', {})
+                    country = addr.get('country', '')
+                    city    = addr.get('city', '')   or addr.get('town', '')   or ''
+                    state   = addr.get('state', '')  or addr.get('region', '') or ''
+                    debug.write(f"Localisation trouvée : {country}, {state}, {city}\n")
+                    # on met à jour lat/lon avec le point exact qui a fonctionné
+                    lat, lon = lat+dx, lon+dy
+                    found = True
+                    break
+            except Exception:
+                # si ce point-là échoue, on passe au suivant
+                continue
+
+        if not found:
+            # aucun point n’a renvoyé d’adresse exploitable
+            country = city = state = "Unknown"
+            debug.write("Reverse geocode a échoué pour tous les points voisins → valeurs par défaut\n")
             continue
-            debug.write("Erreur de localisation, coordonnées inconnues.\n")
+        else:
+            debug.write(f"Localisation trouvée : {country}, {state}, {city}\n")
         
         print(f"Localisation trouvée : {country}, {state}, {city}")
         # Météo avec le module meteo.py
