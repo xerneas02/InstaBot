@@ -12,8 +12,8 @@ password = os.getenv("PASSWORD_INSTAGRAM")
 
 # --- 1) Récupère les données CO₂ ---
 print("Récupération des données CO₂...")
-#url = "https://www.esrl.noaa.gov/gmd/webdata/ccgg/trends/co2/co2_weekly_mlo.txt"
-#urllib.request.urlretrieve(url, "co2.txt")
+url = "https://www.esrl.noaa.gov/gmd/webdata/ccgg/trends/co2/co2_weekly_mlo.txt"
+urllib.request.urlretrieve(url, "co2.txt")
 print("Données récupérées !")
 
 with open("co2.txt") as f:
