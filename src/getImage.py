@@ -12,93 +12,67 @@ from PIL import Image, ImageFont, ImageDraw
 import os
 import glob
 import tiny_planet as tiny
-import pyowm
-from pyowm.utils import timestamps, formatting
+import meteo
 
-OpenWMapKey = os.getenv("OPENW_MAP_KEY")
 GoogleKey = os.getenv("GOOGLE_KEY")
-
 WHEATHER = True
+
 
 def start(debug):
     debug.write("\nGetImage :\n\n")
     good = True
-    
-    if WHEATHER:
-        OpenWMap = pyowm.OWM(OpenWMapKey)
-        debug.write("Login OpenWMap\n")
-
     key = GoogleKey
     dirc = "Image"
-
     os.makedirs(dirc, exist_ok=True)
 
     while good:
         debug.write("Debut de boucle :\n")
-        lat = random.randint(-9000000,9000000)/100000
-        lon = random.randint(-18000000,18000000)/100000
-        debug.write("Coordonnées de départ : {}, {}\n".format(lat, lon))
+        # Choix aléatoire de coordonnées
+        lat = 55.56493000000002#random.randint(-9000000, 9000000) / 100000
+        lon = 37.47615000000006#random.randint(-18000000, 18000000) / 100000
+        debug.write(f"Coordonnées de départ : {lat}, {lon}\n")
         loc = []
+
+        # Récupère le panoid le plus proche
         panoids, lat, lon = streetview.panoids(lat=lat, lon=lon)
-
-        debug.write("Coordonnées : {}, {}\n".format(lat, lon))  
+        debug.write(f"Coordonnées ajustées : {lat}, {lon}\n")
         panoid = panoids[0]['panoid']
+
+        # Reverse geocoding
         locator = Nominatim(user_agent="myGeocoder")
-
-        location = locator.reverse("{}, {}".format(lat, lon), exactly_one=True)
-        address = location.raw['address']
+        location = locator.reverse(f"{lat}, {lon}", exactly_one=True)
+        address = location.raw.get('address', {})
         country = address.get('country', '')
-        city = address.get('city', '')
-        state = address.get('state', '')
-        debug.write("Localisation trouvé : {}, {}, {}\n".format(country, state, city))
-        ## Meteo
+        city    = address.get('city', '')
+        state   = address.get('state', '')
+        debug.write(f"Localisation trouvée : {country}, {state}, {city}\n")
+
+        # Météo avec le module meteo.py
         if WHEATHER:
-            fontSize = 40
-            mgr = OpenWMap.weather_manager()
-            today = formatting.to_UNIXtime(timestamps.datetime.today())
-            one_call = mgr.one_call(lat=lat, lon=lon, dt=today)
-            temperature = one_call.current.temperature('celsius').get('temp', None)
-            data = str(one_call.current).split(",")[2]
-            data = data[17:len(data)-1]
-            meteoImage = Image.open("assets/images/sky.jpg")
-            metoImageEdit = ImageDraw.Draw(meteoImage)
-            debug.write("Meteo : {}, {}°\n".format(data, temperature))
-            currentWeather = "Current weather at " + country
+            temperature, weather_desc = meteo.get_temp_and_weather(lat, lon)
+            debug.write(f"Météo : {weather_desc}, {temperature}°C\n")
+            # Prépare l'image météo
+            meteo_image = Image.open("assets/images/sky.jpg")
+            draw = ImageDraw.Draw(meteo_image)
+            # Texte météo et température
+            text_temp = f"{temperature:.1f}°C"
+            text_desc = weather_desc
+            # Ajuste la taille de police si besoin
+            font_size = 40
+            # On essaie d'utiliser Arial, sinon on revient à une police par défaut
+            try:
+                font = ImageFont.truetype('arial.ttf', font_size)
+            except OSError:
+                font = ImageFont.load_default()
+                        # Positionner à votre convenance
+            draw.text((15, 15), text_desc, fill=(15,15,15), font=font)
+            draw.text((15, 15+font_size+5), text_temp, fill=(15,15,15), font=font)
+            meteo_image.save(os.path.join(dirc, "meteo.jpg"))
+            debug.write("Image météo créée !\n")
 
-        loc.append(country)
-
-        
-        if len(state) > 0:
-            currentWeather = "Current weather at " + state
-            loc.append(state)
-
-        if len(city) > 0: 
-            currentWeather = "Current weather at " + city
-            loc.append(city)
-        
-        if WHEATHER:
-            while (320 - (len(currentWeather)*((fontSize-2)/2)/2)) < 10:
-                fontSize -= 1 
-            debug.write("Taille de police : {}\n".format(fontSize))
-            
-            font = ImageFont.truetype('arial.ttf', fontSize)
-            metoImageEdit.text((15, 15), data, (15, 15, 15), font=font)
-            metoImageEdit.text((550-fontSize, 550), (str(temperature) + "°"), (15, 15, 15), font=font)
-            metoImageEdit.text((abs(320 - (len(currentWeather)*((fontSize-2)/2)/2)), 320 - fontSize), (currentWeather), (15, 15, 15), font=font)
-            print(320 - (len(currentWeather)*((fontSize)/2)/2), 320 - fontSize)
-            meteoImage.save("Image/meteo.jpg")
-            print(country, " : ", data, " ", str(temperature) , "°")
-            debug.write("Image meteo créé!\n")
-
-        #streetview.download_flats(panoid, key=key, flat_dir=dirc, fov=90, width=1080, height=1090)
-        #panorama = streetview.download_panorama_v3(panoid, zoom=3, disp=False)
-
-        #tiny.input_shape = panorama.shape
-        #final_image = tiny.warp(panorama, tiny.little_planet_3, output_shape=tiny.output_shape)
-
+        # Téléchargement des vues plates 4 directions
         flat_imgs = []
-        headings = [0, 90, 180, 270]
-        for heading in headings:
+        for heading in [0, 90, 180, 270]:
             fname = f"{panoid}_{heading}"
             streetview.api_download(
                 panoid=panoid,
@@ -114,51 +88,41 @@ def start(debug):
 
         # Assembler horizontalement
         widths, heights = zip(*(img.size for img in flat_imgs))
-        total_width = sum(widths)
-        max_height = max(heights)
-        panorama = Image.new('RGB', (total_width, max_height))
-        x_offset = 0
+        pano_w = sum(widths)
+        pano_h = max(heights)
+        panorama = Image.new('RGB', (pano_w, pano_h))
+        x_off = 0
         for img in flat_imgs:
-            panorama.paste(img, (x_offset, 0))
-            x_offset += img.width
+            panorama.paste(img, (x_off, 0))
+            x_off += img.width
         panorama_np = np.array(panorama)
 
+        # Warp en tiny planet
         tiny.input_shape = panorama_np.shape
-        final_image = tiny.warp(panorama_np, tiny.little_planet_3, output_shape=tiny.output_shape)
+        final = tiny.warp(panorama_np, tiny.little_planet_3, output_shape=tiny.output_shape)
 
+        # Sauvegarde des deux versions
+        out1 = Image.fromarray((final*255).round().astype(np.uint8))
+        out1.save(os.path.join(dirc, "Panorama.jpg"))
+        debug.write("Image panorama créée.\n")
 
-        
-    #    currentDT = datetime.datetime.now()
-    #    file_name = f"imgs/{currentDT.day}D{currentDT.month}M{currentDT.year}Y_{currentDT.hour}h{currentDT.minute}m{currentDT.second}s.jpg"
-        file_name = "Image/Panorama.jpg"
-        debug.write("Image panorama créé.\n")
+        # version inversée
+        inv = np.rot90(panorama, 2)
+        tiny.input_shape = inv.shape
+        final2 = tiny.warp(inv, tiny.little_planet_3, output_shape=tiny.output_shape)
+        out2 = Image.fromarray((final2*255).round().astype(np.uint8))
+        out2.save(os.path.join(dirc, "PanoramaRevers.jpg"))
+        debug.write("Image panorama inverse créée.\n")
 
-        final_image = Image.fromarray((final_image * 255).round().astype(np.uint8), 'RGB')
-        final_image.save(file_name)
-
-        panorama = np.rot90(panorama, 2)
-        final_image = tiny.warp(panorama, tiny.little_planet_3, output_shape=tiny.output_shape)
-    #    currentDT = datetime.datetime.now()
-    #    file_name = f"imgs/{currentDT.day}D{currentDT.month}M{currentDT.year}Y_{currentDT.hour}h{currentDT.minute}m{currentDT.second}s.jpg"
-        file_name = "Image/PanoramaRevers.jpg"
-
-        final_image = Image.fromarray((final_image * 255).round().astype(np.uint8), 'RGB')
-        final_image.save(file_name)
-        debug.write("Image panorama inverse créé.\n")
-
-        path = streetview.tiles_info(panoid)[0][2]
-        path = path[:len(path)-7]
-        debug.write("nom Image : {}\n".format(path))
+        # Sélection de la meilleure image
+        path = streetview.tiles_info(panoid)[0][2][:-7]
+        debug.write(f"Nom de base pour bestImage : {path}\n")
         retour = bestImage.main(path)
-        if path != "Error":
-            path += retour
-            debug.write("Image choisie : {}\n".format(path))
-            good=False
-            path = "Image/" + path
-
-            img = Image.open(path)
-            area = (11, 0, 629, 618)
-            cropped_img = img.crop(area)
-            cropped_img.save("Image/imageToPost.jpg")
-            debug.write("choisie.\ngetImage fini!\n\n")
-            return int(lat*100000)/100000, int(lon*100000)/100000, loc, debug
+        if retour != "Error":
+            best = path + retour
+            debug.write(f"Image choisie : {best}\n")
+            img = Image.open("Image/"+best)
+            cropped = img.crop((11, 0, 629, 618))
+            cropped.save(os.path.join(dirc, "imageToPost.jpg"))
+            debug.write("ImageToPost créée. getImage fini !\n\n")
+            return round(lat, 5), round(lon, 5), [country, state, city], debug
