@@ -18,10 +18,16 @@ from pyowm.utils import timestamps, formatting
 OpenWMapKey = os.getenv("OPENW_MAP_KEY")
 GoogleKey = os.getenv("GOOGLE_KEY")
 
+WHEATHER = True
+
 def start(debug):
     debug.write("\nGetImage :\n\n")
     good = True
-    #OpenWMap = pyowm.OWM(OpenWMapKey)
+    
+    if WHEATHER:
+        OpenWMap = pyowm.OWM(OpenWMapKey)
+        debug.write("Login OpenWMap\n")
+
     key = GoogleKey
     dirc = "Image"
 
@@ -34,7 +40,7 @@ def start(debug):
         debug.write("Coordonnées de départ : {}, {}\n".format(lat, lon))
         loc = []
         panoids, lat, lon = streetview.panoids(lat=lat, lon=lon)
-        #panoids, lat, lon = streetview.panoids(lat=-5.89923, lon=-76.10207) 
+
         debug.write("Coordonnées : {}, {}\n".format(lat, lon))  
         panoid = panoids[0]['panoid']
         locator = Nominatim(user_agent="myGeocoder")
@@ -46,20 +52,19 @@ def start(debug):
         state = address.get('state', '')
         debug.write("Localisation trouvé : {}, {}, {}\n".format(country, state, city))
         ## Meteo
-        """
-        fontSize = 40
-        mgr = OpenWMap.weather_manager()
-        today = formatting.to_UNIXtime(timestamps.datetime.today())
-        one_call = mgr.one_call(lat=lat, lon=lon, dt=today)
-        temperature = one_call.current.temperature('celsius').get('temp', None)
-        data = str(one_call.current).split(",")[2]
-        data = data[17:len(data)-1]
-        meteoImage = Image.open("src/sky.jpg")
-        metoImageEdit = ImageDraw.Draw(meteoImage)
-        debug.write("Meteo : {}, {}°\n".format(data, temperature))
-        currentWeather = "Current weather at " + country
+        if WHEATHER:
+            fontSize = 40
+            mgr = OpenWMap.weather_manager()
+            today = formatting.to_UNIXtime(timestamps.datetime.today())
+            one_call = mgr.one_call(lat=lat, lon=lon, dt=today)
+            temperature = one_call.current.temperature('celsius').get('temp', None)
+            data = str(one_call.current).split(",")[2]
+            data = data[17:len(data)-1]
+            meteoImage = Image.open("assets/images/sky.jpg")
+            metoImageEdit = ImageDraw.Draw(meteoImage)
+            debug.write("Meteo : {}, {}°\n".format(data, temperature))
+            currentWeather = "Current weather at " + country
 
-        """
         loc.append(country)
 
         
@@ -71,20 +76,19 @@ def start(debug):
             currentWeather = "Current weather at " + city
             loc.append(city)
         
-        """
-        while (320 - (len(currentWeather)*((fontSize-2)/2)/2)) < 10:
-            fontSize -= 1 
-        debug.write("Taille de police : {}\n".format(fontSize))
-        
-        font = ImageFont.truetype('arial.ttf', fontSize)
-        metoImageEdit.text((15, 15), data, (15, 15, 15), font=font)
-        metoImageEdit.text((550-fontSize, 550), (str(temperature) + "°"), (15, 15, 15), font=font)
-        metoImageEdit.text((abs(320 - (len(currentWeather)*((fontSize-2)/2)/2)), 320 - fontSize), (currentWeather), (15, 15, 15), font=font)
-        print(320 - (len(currentWeather)*((fontSize)/2)/2), 320 - fontSize)
-        meteoImage.save("Image/meteo.jpg")
-        print(country, " : ", data, " ", str(temperature) , "°")
-        debug.write("Image meteo créé!\n")
-        """
+        if WHEATHER:
+            while (320 - (len(currentWeather)*((fontSize-2)/2)/2)) < 10:
+                fontSize -= 1 
+            debug.write("Taille de police : {}\n".format(fontSize))
+            
+            font = ImageFont.truetype('arial.ttf', fontSize)
+            metoImageEdit.text((15, 15), data, (15, 15, 15), font=font)
+            metoImageEdit.text((550-fontSize, 550), (str(temperature) + "°"), (15, 15, 15), font=font)
+            metoImageEdit.text((abs(320 - (len(currentWeather)*((fontSize-2)/2)/2)), 320 - fontSize), (currentWeather), (15, 15, 15), font=font)
+            print(320 - (len(currentWeather)*((fontSize)/2)/2), 320 - fontSize)
+            meteoImage.save("Image/meteo.jpg")
+            print(country, " : ", data, " ", str(temperature) , "°")
+            debug.write("Image meteo créé!\n")
 
         #streetview.download_flats(panoid, key=key, flat_dir=dirc, fov=90, width=1080, height=1090)
         #panorama = streetview.download_panorama_v3(panoid, zoom=3, disp=False)

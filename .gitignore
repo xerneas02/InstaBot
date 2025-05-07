@@ -1,5 +1,5 @@
 *.sh
 Image/
-src/_pycache_/
-src/log.txt
-src/co2.txt
+_pycache_/
+log.txt
+co2.txt
