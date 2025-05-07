@@ -18,7 +18,6 @@ class ImageGenerator:
         self.logger = CustomLogger(__name__)
         self.output_dir = output_dir
         self.google_key = os.getenv("GOOGLE_KEY")
-        print(self.google_key)
         os.makedirs(self.output_dir, exist_ok=True)
 
     def get_random_coordinates(self):
