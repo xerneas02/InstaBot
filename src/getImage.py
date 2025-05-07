@@ -24,6 +24,9 @@ def start(debug):
     #OpenWMap = pyowm.OWM(OpenWMapKey)
     key = GoogleKey
     dirc = "Image"
+
+    os.makedirs(dirc, exist_ok=True)
+
     while good:
         debug.write("Debut de boucle :\n")
         lat = random.randint(-9000000,9000000)/100000
