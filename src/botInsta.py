@@ -9,7 +9,7 @@ from instagrapi import Client
 from instagrapi.types import Location, Usertag
 import os
 
-from options import PUBLISH
+from options import PUBLISH, WHEATHER
 
 login    = os.getenv("LOGIN_INSTAGRAM")
 password = os.getenv("PASSWORD_INSTAGRAM")
@@ -48,7 +48,10 @@ try:
                 
                 #tag = [Usertag(user=yannis_id, x=0, y=1), Usertag(user=mathis_id, x=1, y=1)]
 
-                album_path = ["Image/Panorama.jpg", "Image/PanoramaRevers.jpg", "Image/imageToPost.jpg"]#, "Image/meteo.jpg"]
+                album_path = ["Image/Panorama.jpg", "Image/PanoramaRevers.jpg", "Image/imageToPost.jpg"]
+
+                if WHEATHER:
+                    album_path.append("Image/meteo.jpg")
 
                 print(location)
                 text =  "Location : " + str(loc) + "\nLatitude : {}, Longitude : {}".format(lat, lon) + "\nBot made by @eikthyrnir02 and @yannis.rch\n#googlemap #googleearth #googlestreetview #google #bot #photo #paysage #picture #landscape #beautifull #programmation #code #programming #globe #earth #panorama #360 #littleplanet #tinyplanet #ia #random #meteo #360photography #inverted360 #tinyearth360 #360tinyplanet #photosphere #" + ("".join(str(location[0]).split(" "))).split("/")[0].lower() + " #everyday #photos"

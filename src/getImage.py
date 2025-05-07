@@ -61,9 +61,11 @@ def start(debug):
             font_size = 40
             # On essaie d'utiliser Arial, sinon on revient à une police par défaut
             try:
-                font = ImageFont.truetype('arial.ttf', font_size)
+                font = ImageFont.truetype('assets/fonts/American Captain.ttf', font_size)
+                print("Font loaded")
             except OSError:
                 font = ImageFont.load_default()
+                print("Font not loaded")
                         # Positionner à votre convenance
             draw.text((15, 15), text_desc, fill=(15,15,15), font=font)
             draw.text((15, 15+font_size+5), text_temp, fill=(15,15,15), font=font)
