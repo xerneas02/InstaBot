@@ -17,6 +17,29 @@ class StreetViewDownloader:
     logger = CustomLogger(__name__)
 
     @staticmethod
+    def find_nearest_panorama(lat, lon, radius=500000, API_KEY="Your_Api_Key"):
+        """
+        Renvoie (panoid, pano_lat, pano_lng) du panorama le plus proche,
+        ou None si aucun panorama dans le rayon.
+        """
+        url = "https://maps.googleapis.com/maps/api/streetview/metadata"
+        params = {
+            "location": f"{lat},{lon}",
+            "radius": radius,
+            "key": API_KEY
+        }
+        resp = requests.get(url, params=params)
+        resp.raise_for_status()
+        data = resp.json()
+        print(data)
+        if data.get("status") == "OK":
+            loc = data["location"]
+            return data["pano_id"], loc["lat"], loc["lng"]
+        else:
+            print(f"Erreur : {data.get('status')}")
+            return None
+
+    @staticmethod
     def _panoids_url(lat, lon):
         url = "https://maps.googleapis.com/maps/api/js/GeoPhotoService.SingleImageSearch?pb=!1m5!1sapiv3!5sUS!11m2!1m1!1b0!2m4!1m2!3d{0:}!4d{1:}!2d50!3m10!2m2!1sen!2sGB!9m1!1e2!11m4!1m3!1e2!2b1!3e2!4m10!1e1!1e2!1e3!1e4!1e8!1e6!5m1!1e2!6m1!1e2&callback=_xdc_._v2mub5"
         return url.format(lat, lon)
