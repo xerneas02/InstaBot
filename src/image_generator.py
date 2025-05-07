@@ -139,7 +139,7 @@ class ImageGenerator:
         cropped = img.crop((11, 0, 629, 618))
         cropped.save(os.path.join(self.output_dir, "imageToPost.jpg"))
         self.logger.info("Image to post created")
-        return best
+        return best, path
 
     def start(self):
         self.logger.info("Start image generation loop")
@@ -164,7 +164,7 @@ class ImageGenerator:
                 images = self.download_flat_images(panoid)
                 panorama = self.stitch_images(images)
                 self.create_panorama_versions(panorama)
-                best_img = self.create_best_image(panoid)
+                best_img, path = self.create_best_image(panoid)
 
                 if best_img:
                     self.logger.debug("Image generation complete")
