@@ -1,0 +1,25 @@
+name: Post image
+on:
+  schedule:
+    - cron: '0 6 * * *' # every day at 06:00 UTC
+    
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v2
+
+      - name: Set up Python 3.13
+        uses: actions/setup-python@v2
+        with:
+          python-version: '3.13'
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: Run script
+        run: |
+          echo "todo: run the script to post the image"
