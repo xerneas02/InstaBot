@@ -27,6 +27,7 @@ class InstagramBot:
         self.max_attempts = 5
         self.attempts = 0
         self.bot = None
+        self.proxy = os.getenv("PROXY_URL")
 
     def clear_image_folder(self, folder="Image"):
         files = glob.glob(os.path.join(folder, '*'))
@@ -57,6 +58,11 @@ class InstagramBot:
     def login_bot(self):
         self.logger.info("Starting Instagram login process")
         self.bot = Client()
+
+        if self.proxy:
+            self.bot.set_proxy(self.proxy)
+            print(f"Proxy enabled → {self.proxy}")
+
         try:
             # Attempt to load existing session
             if os.path.exists(self.SESSION_FILE):
@@ -139,7 +145,7 @@ class InstagramBot:
                         f"Image/{path}270.jpg"
                     ]
 
-                    self.upload_post(album_path, caption)
+                    #self.upload_post(album_path, caption)
 
                     # save images to a folder
                     for image_path in album_path:
