@@ -15,6 +15,8 @@ from options import PUBLISH
 
 
 class InstagramBot:
+    SESSION_FILE = "insta_session.json"
+
     def __init__(self):
         self.logger = CustomLogger(__name__)
         self.login = os.getenv("LOGIN_INSTAGRAM")
@@ -54,6 +56,18 @@ class InstagramBot:
         self.bot = Client()
         self.bot.login(self.login, self.password)
         self.logger.info("Bot logged in")
+
+        # 1) Si on a déjà une session, on la recharge
+        if os.path.exists(self.SESSION_FILE):
+            self.bot.load_settings(self.SESSION_FILE)
+            self.logger.info("Loaded existing Instagram session")
+
+        # 2) Sinon on se logue “normalement”
+        self.bot.login(self.login, self.password)
+
+        # 3) On dumppe à chaque fois les settings mises à jour
+        self.bot.dump_settings(self.SESSION_FILE)
+        self.logger.info("Logged in and saved session")
 
     def upload_post(self, album_path, caption):
         self.bot.album_upload(album_path, caption=caption)
