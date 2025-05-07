@@ -26,7 +26,7 @@ class CustomLogger(log.Logger):
             self.addHandler(ch)
 
             # File handler
-            fh = log.FileHandler('log.log', mode='w+')
+            fh = log.FileHandler('log.log', mode='a+')
             fh.setLevel(level)
             fh.setFormatter(formatter)
             self.addHandler(fh)

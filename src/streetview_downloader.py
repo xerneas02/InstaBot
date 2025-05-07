@@ -9,6 +9,7 @@ import numpy as np
 from PIL import Image
 from datetime import datetime
 from io import BytesIO
+import math
 
 from custom_logger import CustomLogger
 
@@ -38,52 +39,86 @@ class StreetViewDownloader:
 
     @staticmethod
     def panoids(lat, lon, closest=False, disp=False, proxies=None):
-        find = False
         trace = ""
         count = 0
-        while not find:
-            trace += f'({lat}, {lon})\\n'
+        resp = None
+        found = False
+        original_lat, original_lon = lat, lon
+
+        # 1) Recherche en spirale avec plusieurs rayons croissants
+        """
+        for max_radius in [0.5, 2.0, 10.0, 50.0, 200.0, 1000.0]:
+            for dx, dy in spiral_offsets(step=0.5, max_radius=max_radius):
+                count += 1
+                qlat, qlon = original_lat + dy, original_lon + dx
+                trace += f"({qlat:.6f}, {qlon:.6f})\n"
+                print(f"Recherche en spirale : ({qlat:.6f}, {qlon:.6f})")
+                resp = _panoids_data(qlat, qlon)
+                if resp.text[67] + resp.text[68] != "no":
+                    lat, lon = qlat, qlon
+                    found = True
+                    break
+            if found:
+                break"""
+
+        # 2) Si toujours rien, fallback sur jitter aléatoire (comme avant) jusqu'à trouver
+        while not found:
             count += 1
-            resp = StreetViewDownloader._panoids_data(lat, lon, proxies=proxies)
+            # jitter aléatoire
+            add = random.randint(-1000000, 1000000) / 10000
+            while original_lat + add < -90 or original_lat + add > 90:
+                add = random.randint(-1000000, 1000000) / 10000
+            qlat = original_lat + add
+            add = random.randint(-1000000, 1000000) / 10000
+            while original_lon + add < -180 or original_lon + add > 180:
+                add = random.randint(-1000000, 1000000) / 10000
+            qlon = original_lon + add
+
+            trace += f"({qlat:.6f}, {qlon:.6f})\n"
+            resp = StreetViewDownloader._panoids_data(qlat, qlon)
             if resp.text[67] + resp.text[68] != "no":
-                find = True
-            else:
-                add = random.randint(-1000000, 1000000)/10000
-                while lat + add < -90 or lat + add > 90:
-                    add = random.randint(-1000000, 1000000)/10000
-                lat += add
-                add = random.randint(-1000000, 1000000)/10000
-                while lon + add < -180 or lon + add > 180:
-                    add = random.randint(-1000000, 1000000)/10000
-                lon += add
-        StreetViewDownloader.logger.info(f"Found a panorama after {count} tries")
+                lat, lon = qlat, qlon
+                found = True
+                break
+            
+        StreetViewDownloader.logger.info(f"Panoids found after {count} attempts")
 
-        pans = re.findall(r'\[[0-9]+,"(.+?)"\].+?\[\[null,null,(-?[0-9]+.[0-9]+),(-?[0-9]+.[0-9]+)', resp.text)
-        pans = [{"panoid": p[0], "lat": float(p[1]), "lon": float(p[2])} for p in pans]
+        # Extraction des panoids + coords (inchangé)
+        pans = re.findall(
+            r'\[[0-9]+,"(.+?)"\].+?\[\[null,null,'
+            r'(-?[0-9]+\.[0-9]+),(-?[0-9]+\.[0-9]+)',
+            resp.text
+        )
+        pans = [
+            {"panoid": p[0], "lat": float(p[1]), "lon": float(p[2])}
+            for p in pans
+        ]
         pans = [p for i, p in enumerate(pans) if p not in pans[:i]]
-
         if disp:
             for pan in pans:
-                StreetViewDownloader.logger.info(pan)
+                print(pan)
 
+        # Extraction et assignation des dates (inchangé)
         dates = re.findall(r'([0-9]?[0-9]?[0-9])?,?\[(20[0-9][0-9]),([0-9]+)\]', resp.text)
         dates = [list(d)[1:] for d in dates]
         if dates:
             dates = [[int(v) for v in d] for d in dates if 1 <= int(d[1]) <= 12]
             year, month = dates.pop(-1)
-            pans[0].update({'year': year, "month": month})
+            pans[0].update({'year': year, 'month': month})
             dates.reverse()
-            for i, (year, month) in enumerate(dates):
-                pans[-1-i].update({'year': year, "month": month})
+            for i, (y, m) in enumerate(dates):
+                pans[-1-i].update({'year': y, 'month': m})
 
-        def func(x):
-            if 'year' in x:
-                return datetime(year=x['year'], month=x['month'], day=1)
-            else:
-                return datetime(year=3000, month=1, day=1)
-        pans.sort(key=func)
+        # Tri chronologique (inchangé)
+        def _key(p):
+            return datetime(p['year'], p['month'], 1) if 'year' in p else datetime(3000,1,1)
+        pans.sort(key=_key)
 
-        return ([pans[i] for i in range(len(dates))] if closest else pans), lat, lon
+        # Retour identique
+        if closest:
+            return [pans[i] for i in range(len(dates))], lat, lon
+        else:
+            return pans, lat, lon
 
     @staticmethod
     def tiles_info(panoid, zoom=5):
@@ -98,6 +133,47 @@ class StreetViewDownloader:
                 os.remove(os.path.join(directory, fname))
             except OSError as e:
                 StreetViewDownloader.logger.warning(f"Failed to delete tile {fname}: {e}")
+
+    @staticmethod
+    def find_nearest_panorama(lat, lon, radius=500000, API_KEY="Your_Api_Key"):
+        """
+        Renvoie (panoid, pano_lat, pano_lng) du panorama le plus proche,
+        ou None si aucun panorama dans le rayon.
+        """
+        url = "https://maps.googleapis.com/maps/api/streetview/metadata"
+        params = {
+            "location": f"{lat},{lon}",
+            "radius": radius,
+            "key": API_KEY
+        }
+        resp = requests.get(url, params=params)
+        resp.raise_for_status()
+        data = resp.json()
+        if data.get("status") == "OK":
+            loc = data["location"]
+            return data["pano_id"], loc["lat"], loc["lng"]
+        else:
+            StreetViewDownloader.logger.warning(f"Error: {data.get('status')}")
+            return None
+    
+    @staticmethod
+    def spiral_offsets(step=0.0005, max_radius=90):
+        """
+        Génère des (dx,dy) formant une spirale autour de (0,0),
+        jusqu’à max_radius (en degrés décimaux).
+        """
+        x = y = 0
+        dx, dy = step, 0
+        segment_length = 1
+        while math.hypot(x, y) <= max_radius:
+            for _ in range(segment_length):
+                if math.hypot(x, y) > max_radius:
+                    return
+                yield x, y
+                x, y = x + dx, y + dy
+            dx, dy = -dy, dx
+            if dy == 0:
+                segment_length += 1
 
     @staticmethod
     def download_panorama_v3(panoid, zoom=5, disp=False):

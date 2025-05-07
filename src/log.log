@@ -1,0 +1,27 @@
+2025-05-07 16:33:15 - INSTABOT.__main__ - INFO - Start botInsta
+2025-05-07 16:33:15 - INSTABOT.__main__ - INFO - Image folder emptied
+2025-05-07 16:33:15 - INSTABOT.image_generator - INFO - Start image generation loop
+2025-05-07 16:33:15 - INSTABOT.image_generator - DEBUG - Trying coordinates: 54.0952, 96.41283
+2025-05-07 16:33:15 - INSTABOT.image_generator - DEBUG - Coordinates found: 54.21766100422744, 96.97677801890943
+2025-05-07 16:33:15 - INSTABOT.image_generator - DEBUG - Random coordinates: 54.21766100422744, 96.97677801890943
+2025-05-07 16:33:24 - INSTABOT.streetview_downloader - INFO - Panoids found after 51 attempts
+2025-05-07 16:33:24 - INSTABOT.image_generator - DEBUG - Using panoid: GaGyXaKwnLfvadXQ-74FGw
+2025-05-07 16:33:25 - INSTABOT.image_generator - WARNING - Location error, coordinates unknown.
+2025-05-07 16:33:27 - INSTABOT.tiny_planet_transformer - INFO - Transformer initialized with input shape: (640, 2560, 3) and output shape: (1080, 1080)
+2025-05-07 16:33:27 - INSTABOT.image_generator - INFO - Panorama image created
+2025-05-07 16:33:28 - INSTABOT.image_generator - INFO - Inverted panorama image created
+2025-05-07 16:33:28 - INSTABOT.image_generator - DEBUG - Base path for best image: GaGyXaKwnLfvadXQ-74FGw_
+2025-05-07 16:33:43 - INSTABOT.image_analyzer - DEBUG - border ratio: 68.89%
+2025-05-07 16:33:43 - INSTABOT.image_generator - INFO - Image to post created
+2025-05-07 16:33:43 - INSTABOT.image_generator - DEBUG - Image generation complete
+2025-05-07 16:33:43 - INSTABOT.image_generator - ERROR - Exception in image generation: name 'path' is not defined
+2025-05-07 16:33:43 - INSTABOT.image_generator - DEBUG - Trying coordinates: -53.67153, 144.58746
+2025-05-07 16:33:43 - INSTABOT.image_generator - DEBUG - Coordinates found: -44.89235790169638, 169.2921998427511
+2025-05-07 16:33:43 - INSTABOT.image_generator - DEBUG - Random coordinates: -44.89235790169638, 169.2921998427511
+2025-05-07 16:34:25 - INSTABOT.streetview_downloader - INFO - Panoids found after 276 attempts
+2025-05-07 16:34:25 - INSTABOT.image_generator - DEBUG - Using panoid: OmlUxNQgtHRrB0NEhrrG2w
+2025-05-07 16:34:27 - INSTABOT.image_generator - WARNING - Location error, coordinates unknown.
+2025-05-07 16:34:28 - INSTABOT.tiny_planet_transformer - INFO - Transformer initialized with input shape: (640, 2560, 3) and output shape: (1080, 1080)
+2025-05-07 16:34:29 - INSTABOT.image_generator - INFO - Panorama image created
+2025-05-07 16:34:29 - INSTABOT.image_generator - INFO - Inverted panorama image created
+2025-05-07 16:34:29 - INSTABOT.image_generator - DEBUG - Base path for best image: OmlUxNQgtHRrB0NEhrrG2w_
