@@ -9,7 +9,7 @@ from instagrapi import Client
 from instagrapi.types import Location, Usertag
 import os
 
-POST = False
+from options import PUBLISH
 
 login    = os.getenv("LOGIN_INSTAGRAM")
 password = os.getenv("PASSWORD_INSTAGRAM")
@@ -75,7 +75,7 @@ try:
             sleep(60)
 
     if countLoop <= 3:
-        if POST:
+        if PUBLISH:
             print("Images published!")
             debug.write('Image publi!')
         else:
