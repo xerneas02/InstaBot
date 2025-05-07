@@ -28,25 +28,42 @@ def start(debug):
     while good:
         debug.write("Debut de boucle :\n")
         # Choix aléatoire de coordonnées
-        lat = random.randint(-9000000, 9000000) / 100000
-        lon = random.randint(-18000000, 18000000) / 100000
-        debug.write(f"Coordonnées de départ : {lat}, {lon}\n")
+        result = None
+        while result == None :
+            lat = random.randint(-9000000, 9000000) / 100000
+            lon = random.randint(-18000000, 18000000) / 100000
+
+            print(f"Tentative de coordonnées : {lat}, {lon}")
+
+            result = streetview.find_nearest_panorama(lat=lat, lon=lon, API_KEY=GoogleKey)
+
+        debug.write(f"Coordonnées : {lat}, {lon}\n")
         loc = []
 
-        # Récupère le panoid le plus proche
-        panoids, lat, lon = streetview.panoids(lat=lat, lon=lon)
+
+
+
+        panoid, lat, lon = result
+        print(panoid)
         debug.write(f"Coordonnées ajustées : {lat}, {lon}\n")
-        panoid = panoids[0]['panoid']
 
         # Reverse geocoding
-        locator = Nominatim(user_agent="myGeocoder")
-        location = locator.reverse(f"{lat}, {lon}", exactly_one=True)
-        address = location.raw.get('address', {})
-        country = address.get('country', '')
-        city    = address.get('city', '')
-        state   = address.get('state', '')
-        debug.write(f"Localisation trouvée : {country}, {state}, {city}\n")
-
+        try:
+            locator = Nominatim(user_agent="myGeocoder")
+            location = locator.reverse(f"{lat}, {lon}", exactly_one=True)
+            address = location.raw.get('address', {})
+            country = address.get('country', '')
+            city    = address.get('city', '')
+            state   = address.get('state', '')
+            debug.write(f"Localisation trouvée : {country}, {state}, {city}\n")
+        except:
+            country = "Unkown"
+            city    = "Unkown"
+            state   = "Unkown"
+            continue
+            debug.write("Erreur de localisation, coordonnées inconnues.\n")
+        
+        print(f"Localisation trouvée : {country}, {state}, {city}")
         # Météo avec le module meteo.py
         if WHEATHER:
             temperature, weather_desc = meteo.get_temp_and_weather(lat, lon)
@@ -119,6 +136,8 @@ def start(debug):
         # Sélection de la meilleure image
         path = streetview.tiles_info(panoid)[0][2][:-7]
         debug.write(f"Nom de base pour bestImage : {path}\n")
+        
+        """
         retour = bestImage.main(path)
         if retour != "Error":
             best = path + retour
@@ -127,4 +146,6 @@ def start(debug):
             cropped = img.crop((11, 0, 629, 618))
             cropped.save(os.path.join(dirc, "imageToPost.jpg"))
             debug.write("ImageToPost créée. getImage fini !\n\n")
-            return round(lat, 5), round(lon, 5), [country, state, city], debug
+        """
+
+        return round(lat, 5), round(lon, 5), [country, state, city], debug, path

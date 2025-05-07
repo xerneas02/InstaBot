@@ -29,7 +29,7 @@ try:
             for f in files:
                 os.remove(f)
             debug.write("fichier Image vidé\n")
-            lat, lon, location, debug = getImage.start(debug)
+            lat, lon, location, debug, path = getImage.start(debug)
             debug.write("latitude = {}, longitude = {}, ".format(lat, lon))
             loc = ""
             
@@ -37,6 +37,8 @@ try:
                 loc += i + ", "
             loc = loc[:len(loc)-2]
             debug.write("location = {}\n".format(loc))
+
+            print(["Image/Panorama.jpg", "Image/PanoramaRevers.jpg", f"Image/{path}0.jpg", f"Image/{path}90.jpg", f"Image/{path}180.jpg", f"Image/{path}270.jpg"])
 
             if PUBLISH:
                 bot = Client()
@@ -48,7 +50,7 @@ try:
                 
                 #tag = [Usertag(user=yannis_id, x=0, y=1), Usertag(user=mathis_id, x=1, y=1)]
 
-                album_path = ["Image/Panorama.jpg", "Image/PanoramaRevers.jpg", "Image/imageToPost.jpg"]
+                album_path = ["Image/Panorama.jpg", "Image/PanoramaRevers.jpg", f"Image/{path}0.jpg", f"Image/{path}90.jpg", f"Image/{path}180.jpg", f"Image/{path}270.jpg"]
 
                 if WHEATHER:
                     album_path.append("Image/meteo.jpg")

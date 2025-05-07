@@ -22,7 +22,29 @@ import os
 import numpy as np
 from skimage import io
 import random
+import math
 
+def find_nearest_panorama(lat, lon, radius=500000, API_KEY="Your_Api_Key"):
+    """
+    Renvoie (panoid, pano_lat, pano_lng) du panorama le plus proche,
+    ou None si aucun panorama dans le rayon.
+    """
+    url = "https://maps.googleapis.com/maps/api/streetview/metadata"
+    params = {
+        "location": f"{lat},{lon}",
+        "radius": radius,
+        "key": API_KEY
+    }
+    resp = requests.get(url, params=params)
+    resp.raise_for_status()
+    data = resp.json()
+    print(data)
+    if data.get("status") == "OK":
+        loc = data["location"]
+        return data["pano_id"], loc["lat"], loc["lng"]
+    else:
+        print(f"Erreur : {data.get('status')}")
+        return None
 
 def _panoids_url(lat, lon):
     """
@@ -57,101 +79,112 @@ def _panoids_data(lat, lon, proxies=None):
 
     return response
 
+def spiral_offsets(step=0.0005, max_radius=90):
+    """
+    Génère des (dx,dy) formant une spirale autour de (0,0),
+    jusqu’à max_radius (en degrés décimaux).
+    """
+    x = y = 0
+    dx, dy = step, 0
+    segment_length = 1
+    while math.hypot(x, y) <= max_radius:
+        for _ in range(segment_length):
+            if math.hypot(x, y) > max_radius:
+                return
+            yield x, y
+            x, y = x + dx, y + dy
+        dx, dy = -dy, dx
+        if dy == 0:
+            segment_length += 1
+
 def panoids(lat, lon, closest=False, disp=False, proxies=None):
     """
     Gets the closest panoramas (ids) to the GPS coordinates.
     If the 'closest' boolean parameter is set to true, only the closest panorama
     will be gotten (at all the available dates)
     """
-    find = False
     trace = ""
     count = 0
-    while not find:
-        trace += '('+str(lat) + ', ' + str(lon) + ')\n'
+    resp = None
+    found = False
+    original_lat, original_lon = lat, lon
+
+    # 1) Recherche en spirale avec plusieurs rayons croissants
+    """
+    for max_radius in [0.5, 2.0, 10.0, 50.0, 200.0, 1000.0]:
+        for dx, dy in spiral_offsets(step=0.5, max_radius=max_radius):
+            count += 1
+            qlat, qlon = original_lat + dy, original_lon + dx
+            trace += f"({qlat:.6f}, {qlon:.6f})\n"
+            print(f"Recherche en spirale : ({qlat:.6f}, {qlon:.6f})")
+            resp = _panoids_data(qlat, qlon)
+            if resp.text[67] + resp.text[68] != "no":
+                lat, lon = qlat, qlon
+                found = True
+                break
+        if found:
+            break"""
+
+    # 2) Si toujours rien, fallback sur jitter aléatoire (comme avant) jusqu'à trouver
+    while not found:
         count += 1
-        resp = _panoids_data(lat, lon)
+        # jitter aléatoire
+        add = random.randint(-1000000, 1000000) / 10000
+        while original_lat + add < -90 or original_lat + add > 90:
+            add = random.randint(-1000000, 1000000) / 10000
+        qlat = original_lat + add
+        add = random.randint(-1000000, 1000000) / 10000
+        while original_lon + add < -180 or original_lon + add > 180:
+            add = random.randint(-1000000, 1000000) / 10000
+        qlon = original_lon + add
+
+        trace += f"({qlat:.6f}, {qlon:.6f})\n"
+        resp = _panoids_data(qlat, qlon)
         if resp.text[67] + resp.text[68] != "no":
-            find = True
-        else:            
-            add = random.randint(-1000000, 1000000)/10000
-            while lat + add < -90 or lat + add > 90:
-                add = random.randint(-1000000, 1000000)/10000
-            lat += add
-            add = random.randint(-1000000, 1000000)/10000
-            while lon + add < -180 or lon + add > 180:
-                add = random.randint(-1000000, 1000000)/10000
-            lon += add
-    trace += "nombre de tentative : {}".format(count)
+            lat, lon = qlat, qlon
+            found = True
+            break
+
+    trace += f"nombre de tentatives : {count}"
     print(trace)
-    # Get all the panorama ids and coordinates
-    # I think the latest panorama should be the first one. And the previous
-    # successive ones ought to be in reverse order from bottom to top. The final
-    # images don't seem to correspond to a particular year. So if there is one
-    # image per year I expect them to be orded like:
-    # 2015
-    # XXXX
-    # XXXX
-    # 2012
-    # 2013
-    # 2014
 
-    pans = re.findall('\[[0-9]+,"(.+?)"\].+?\[\[null,null,(-?[0-9]+.[0-9]+),(-?[0-9]+.[0-9]+)', resp.text)
-    pans = [{
-        "panoid": p[0],
-        "lat": float(p[1]),
-        "lon": float(p[2])} for p in pans]  # Convert to floats
-
-    # Remove duplicate panoramas
+    # Extraction des panoids + coords (inchangé)
+    pans = re.findall(
+        r'\[[0-9]+,"(.+?)"\].+?\[\[null,null,'
+        r'(-?[0-9]+\.[0-9]+),(-?[0-9]+\.[0-9]+)',
+        resp.text
+    )
+    pans = [
+        {"panoid": p[0], "lat": float(p[1]), "lon": float(p[2])}
+        for p in pans
+    ]
     pans = [p for i, p in enumerate(pans) if p not in pans[:i]]
-
     if disp:
         for pan in pans:
             print(pan)
 
-    # Get all the dates
-    # The dates seem to be at the end of the file. They have a strange format but
-    # are in the same order as the panoids except that the latest date is last
-    # instead of first.
-    dates = re.findall('([0-9]?[0-9]?[0-9])?,?\[(20[0-9][0-9]),([0-9]+)\]', resp.text)
-    dates = [list(d)[1:] for d in dates]  # Convert to lists and drop the index
-
-    if len(dates) > 0:
-        # Convert all values to integers
-        dates = [[int(v) for v in d] for d in dates]
-
-        # Make sure the month value is between 1-12
-        dates = [d for d in dates if d[1] <= 12 and d[1] >= 1]
-
-        # The last date belongs to the first panorama
+    # Extraction et assignation des dates (inchangé)
+    dates = re.findall(r'([0-9]?[0-9]?[0-9])?,?\[(20[0-9][0-9]),([0-9]+)\]', resp.text)
+    dates = [list(d)[1:] for d in dates]
+    if dates:
+        dates = [[int(v) for v in d] for d in dates if 1 <= int(d[1]) <= 12]
         year, month = dates.pop(-1)
-        pans[0].update({'year': year, "month": month})
-
-        # The dates then apply in reverse order to the bottom panoramas
+        pans[0].update({'year': year, 'month': month})
         dates.reverse()
-        for i, (year, month) in enumerate(dates):
-            pans[-1-i].update({'year': year, "month": month})
+        for i, (y, m) in enumerate(dates):
+            pans[-1-i].update({'year': y, 'month': m})
 
-    # # Make the first value of the dates the index
-    # if len(dates) > 0 and dates[-1][0] == '':
-    #     dates[-1][0] = '0'
-    # dates = [[int(v) for v in d] for d in dates]  # Convert all values to integers
-    #
-    # # Merge the dates into the panorama dictionaries
-    # for i, year, month in dates:
-    #     pans[i].update({'year': year, "month": month})
+    # Tri chronologique (inchangé)
+    def _key(p):
+        return datetime(p['year'], p['month'], 1) if 'year' in p else datetime(3000,1,1)
+    pans.sort(key=_key)
 
-    # Sort the pans array
-    def func(x):
-        if 'year'in x:
-            return datetime(year=x['year'], month=x['month'], day=1)
-        else:
-            return datetime(year=3000, month=1, day=1)
-    pans.sort(key=func)
-
+    # Retour identique
     if closest:
         return [pans[i] for i in range(len(dates))], lat, lon
     else:
         return pans, lat, lon
+
 
 
 def tiles_info(panoid, zoom=5):
@@ -375,7 +408,7 @@ def delete_tiles(tiles, directory):
         os.remove(directory + "/" + fname)
 
 
-def api_download(panoid, heading, flat_dir, key, width=640, height=640,
+def api_download(panoid, heading, flat_dir, key, width=1080, height=1080,
                  fov=120, pitch=0, extension='jpg', year=2017, fname=None):
     """
     Download an image using the official API. These are not panoramas.
