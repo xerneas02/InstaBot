@@ -10,10 +10,10 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v2
 
-      - name: Set up Python 3.13
+      - name: Set up Python 3.12
         uses: actions/setup-python@v2
         with:
-          python-version: '3.13'
+          python-version: '3.12'
 
       - name: Install dependencies
         run: |
@@ -21,5 +21,24 @@ jobs:
           pip install -r requirements.txt
 
       - name: Run script
+        env:
+          LOGIN_INSTAGRAM: ${{ secrets.LOGIN_INSTAGRAM }}
+          PASSWORD_INSTAGRAM: ${{ secrets.PASSWORD_INSTAGRAM }}
+          GOOGLE_KEY: ${{ secrets.GOOGLE_KEY }}
         run: |
-          echo "todo: run the script to post the image"
+          cd src
+          python instagram_bot.py
+          
+      - name: Upload images artifact
+        uses: actions/upload-artifact@v2
+        with:
+          name: images
+          path: src/Image/*.jpg
+
+      - name: Upload log artifact
+        uses: actions/upload-artifact@v2
+        with:
+          name: log
+          path: src/log.log
+
+          
