@@ -4,23 +4,16 @@ fichier Image vidé
 GetImage :
 
 Debut de boucle :
-Coordonnées de départ : 83.28907, 83.08516
-Coordonnées : 36.66096999999998, 138.23815999999997
-Localisation trouvé : 日本, , 長野市
+Coordonnées de départ : -6.49912, -98.56979
+Coordonnées : 43.234180000000016, 44.66960999999988
+Localisation trouvé : Россия, Ингушетия, 
 Image panorama créé.
 Image panorama inverse créé.
-nom Image : npdnT1pJLtbS2eFbWFNEbA_
-Image choisie : npdnT1pJLtbS2eFbWFNEbA_0.jpg
-Image choisie.
+nom Image : eM6XBuzsCfkS8TKGZGfWgw_
+Image choisie : eM6XBuzsCfkS8TKGZGfWgw_270.jpg
+choisie.
 getImage fini!
 
-latitude = 36.66096, longitude = 138.23815, location = 日本, 長野市
-Bot log in!
-
-Location : 日本, 長野市
-Latitude : 36.66096, Longitude : 138.23815
-Bot made by @eikthyrnir02 and @yannis.rch
-#googlemap #googleearth #googlestreetview #google #bot #photo #paysage #picture #landscape #beautifull #programmation #code #programming #globe #earth #panorama #360 #littleplanet #tinyplanet #ia #random #meteo #360photography #inverted360 #tinyearth360 #360tinyplanet #photosphere #日本 #everyday #photos
-
+latitude = 43.23418, longitude = 44.6696, location = Россия, Ингушетия
 Fin
 Image publie!

@@ -153,5 +153,5 @@ def start(debug):
             area = (11, 0, 629, 618)
             cropped_img = img.crop(area)
             cropped_img.save("Image/imageToPost.jpg")
-            debug.write("Image choisie.\ngetImage fini!\n\n")
+            debug.write("choisie.\ngetImage fini!\n\n")
             return int(lat*100000)/100000, int(lon*100000)/100000, loc, debug

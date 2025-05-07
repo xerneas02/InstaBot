@@ -2,6 +2,10 @@ import urllib.request
 from instagrapi import Client
 from instagrapi.types import Location, StoryMention, StoryLocation, StoryLink, StoryHashtag
 from PIL import Image, ImageFont, ImageDraw
+import os
+
+login    = os.getenv("LOGIN_INSTAGRAM")
+password = os.getenv("PASSWORD_INSTAGRAM")
 
 urllib.request.urlretrieve("https://www.esrl.noaa.gov/gmd/webdata/ccgg/trends/co2/co2_weekly_mlo.txt", "co2.txt")
 co2 = open("co2.txt", "r")
@@ -31,7 +35,7 @@ carbonImageEdit.text((60, 15), texte, (255, 255, 255), font=font)
 carbonImage.save("Image/carbon.jpg")
 
 bot = Client()
-bot.login("imageduglobe", "3macs*C/EstGeni4l")
+bot.login(login, password)
 print("Bot log in!\n")
 
 
