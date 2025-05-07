@@ -7,6 +7,8 @@ import traceback
 
 from instagrapi import Client
 from instagrapi.types import Location, Usertag
+from instagrapi.exceptions import LoginRequired, TwoFactorRequired, ChallengeRequired, ClientError
+
 
 # Internal imports
 from image_generator import ImageGenerator
@@ -53,21 +55,58 @@ class InstagramBot:
         return text
 
     def login_bot(self):
+        self.logger.info("Starting Instagram login process")
         self.bot = Client()
-        self.bot.login(self.login, self.password)
-        self.logger.info("Bot logged in")
+        try:
+            # Attempt to load existing session
+            if os.path.exists(self.SESSION_FILE):
+                self.logger.debug(f"Session file found at {self.SESSION_FILE}, loading...")
+                try:
+                    self.bot.load_settings(self.SESSION_FILE)
+                    self.logger.info("Loaded existing session settings successfully")
+                except Exception as e:
+                    self.logger.error(f"Failed to load session settings: {e}")
+                    self.logger.debug(traceback.format_exc())
+            else:
+                self.logger.debug("No session file found, will perform fresh login")
 
-        # 1) Si on a déjà une session, on la recharge
-        if os.path.exists(self.SESSION_FILE):
-            self.bot.load_settings(self.SESSION_FILE)
-            self.logger.info("Loaded existing Instagram session")
+            # Perform login
+            self.logger.debug("Attempting to login with provided credentials")
+            try:
+                self.bot.login(self.login, self.password)
+                self.logger.info("Login successful")
+            except TwoFactorRequired as e:
+                self.logger.error("Two-factor authentication required")
+                self.logger.debug(traceback.format_exc())
+                raise
+            except ChallengeRequired as e:
+                self.logger.error("Challenge required: further verification needed")
+                self.logger.debug(traceback.format_exc())
+                raise
+            except LoginRequired as e:
+                self.logger.error("Login required: invalid session, re-authenticating")
+                self.logger.debug(traceback.format_exc())
+                raise
+            except ClientError as e:
+                self.logger.error(f"Client error during login: {e}")
+                self.logger.debug(traceback.format_exc())
+                raise
+            except Exception as e:
+                self.logger.error(f"Unexpected error during login: {e}")
+                self.logger.debug(traceback.format_exc())
+                raise
 
-        # 2) Sinon on se logue “normalement”
-        self.bot.login(self.login, self.password)
+            # Save session settings after successful login
+            try:
+                self.bot.dump_settings(self.SESSION_FILE)
+                self.logger.info("Session settings saved to file")
+            except Exception as e:
+                self.logger.error(f"Failed to dump session settings: {e}")
+                self.logger.debug(traceback.format_exc())
 
-        # 3) On dumppe à chaque fois les settings mises à jour
-        self.bot.dump_settings(self.SESSION_FILE)
-        self.logger.info("Logged in and saved session")
+        except Exception as e:
+            self.logger.critical("Instagram login process failed", exc_info=True)
+            raise
 
     def upload_post(self, album_path, caption):
         self.bot.album_upload(album_path, caption=caption)
