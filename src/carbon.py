@@ -121,10 +121,10 @@ if __name__ == '__main__':
     # --- Génération et publication ---
     out_path = create_co2_image(
         data,
-        background_path='assets/images/carbonBG.jpg',
+        background_path='../assets/images/carbonBG.jpg',
         font_paths={
-            'title': 'assets/fonts/Arial.ttf',
-            'text': 'assets/fonts/Arial.ttf'
+            'title': '../assets/fonts/Arial.ttf',
+            'text': '../assets/fonts/Arial.ttf'
         },
         output_path='Image/carbon_story.png'
     )
