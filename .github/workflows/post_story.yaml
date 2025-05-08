@@ -1,8 +1,7 @@
 name: Post story
 on:
   schedule:
-    # Every Saturday at 06:00 UTC
-    - cron: '0 6 * * 6'
+    - cron: '0 6 * * 6' # Every Saturday at 06:00 UTC
     #- cron: '*/5 * * * *'
   workflow_dispatch: {} # allow manual trigger
 
