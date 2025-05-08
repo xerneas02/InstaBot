@@ -69,10 +69,13 @@ def create_co2_image(data_points, background_path, font_paths, output_path):
 
     # Texte descriptif
     description = (
-        f"La semaine dernière  : {data_points['1sem']:.2f} ppm\n"
-        f"Il y a deux semaines  : {data_points['2sem']:.2f} ppm\n"
-        f"Il y a 1 an          : {data_points['1an']:.2f} ppm\n"
-        f"Il y a 10 ans        : {data_points['10ans']:.2f} ppm"    
+        "\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n"
+        "Le taux de CO2 dans l'atmosphère :\n\n\n\n\n\n\n\n\n"
+        f"La semaine dernière  : {data_points['1sem']:.2f} ppm\n\n\n\n\n\n"
+        f"Il y a deux semaines  : {data_points['2sem']:.2f} ppm\n\n\n\n\n\n"
+        f"Il y a 1 an                   : {data_points['1an']:.2f} ppm\n\n\n\n\n\n"
+        f"Il y a 10 ans               : {data_points['10ans']:.2f} ppm\n\n\n\n\n\n\n\n\n"
+        "ppm = partie par million\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n"
     )
     lines_txt = description.splitlines()
     w0 = max(draw.textbbox((0,0), line, font=font_txt)[2] for line in lines_txt)
