@@ -132,7 +132,6 @@ if __name__ == '__main__':
 
     if PUBLISH:
         bot = Client()
-        bot.login(os.getenv('LOGIN_INSTAGRAM'), os.getenv('PASSWORD_INSTAGRAM'))
 
         if os.path.exists(SESSION_FILE):
             logger.debug(f"Session file found at {SESSION_FILE}, loading...")
@@ -142,5 +141,6 @@ if __name__ == '__main__':
             except Exception as e:
                 logger.error(f"Failed to load session settings: {e}")
 
+        bot.login(os.getenv('LOGIN_INSTAGRAM'), os.getenv('PASSWORD_INSTAGRAM'))
         bot.photo_upload_to_story(out_path, caption='Taux de CO₂ 🌍')
         print('Publié en story !')
