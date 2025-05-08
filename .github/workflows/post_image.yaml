@@ -1,7 +1,7 @@
 name: Post image
 on:
   schedule:
-    - cron: '*/5 * * * *' # every day at 06:00 UTC
+    - cron: '0 6 * * *' # every day at 06:00 UTC
   workflow_dispatch: {} # allow manual trigger
     
 jobs:
