@@ -5,7 +5,7 @@ import traceback
 from instagrapi import Client
 from instagrapi.exceptions import TwoFactorRequired, ChallengeRequired, LoginRequired
 
-SESSION_FILE = "insta_session.json"
+SESSION_FILE = "src/insta_session.json"
 
 def generate_session():
     username = os.getenv("LOGIN_INSTAGRAM")

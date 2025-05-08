@@ -62,7 +62,7 @@ def create_co2_image(data_points, background_path, font_paths, output_path):
         font_txt   = ImageFont.load_default()
 
     # Titre
-    title = 'Évolution du taux de CO2'
+    title = '\n\nÉvolution du taux de CO2'
     bbox = draw.textbbox((0,0), title, font=font_title)
     w_t, h_t = bbox[2] - bbox[0], bbox[3] - bbox[1]
     draw.text(((W - w_t) / 2, 20), title, fill='white', font=font_title)
@@ -129,7 +129,7 @@ if __name__ == '__main__':
             'title': '../assets/fonts/Arial.ttf',
             'text': '../assets/fonts/Arial.ttf'
         },
-        output_path='Image/carbon_story.png'
+        output_path='../Image/carbon_story.png'
     )
     print(f"Image enregistrée : {out_path}")
 
