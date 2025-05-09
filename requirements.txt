@@ -7,3 +7,5 @@ pyowm
 instagrapi
 requests
 scikit-image
+streetview
+py360convert

@@ -50,7 +50,8 @@ class TinyPlanetTransformer:
     def little_planet_map(self, coords):
         """Applique la transformation 'little planet' aux coordonnées données."""
         r_theta = self.output_coord_to_r_theta(coords)
-        r_theta[:, 0] = np.sqrt(r_theta[:, 0])
+        r_theta[:, 0] = r_theta[:, 0] ** 0.6
+
         r_theta[:, 1] += 0.1
         return self.r_theta_to_input_coords(r_theta)
 
@@ -67,4 +68,4 @@ class TinyPlanetTransformer:
             mapping_func = self.little_planet_map
         if output_shape is None:
             output_shape = self.output_shape
-        return warp(image, mapping_func, output_shape=output_shape)
+        return warp(image, mapping_func, output_shape=output_shape, mode="wrap")

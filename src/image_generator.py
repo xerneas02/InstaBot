@@ -12,6 +12,8 @@ import meteo
 from options import WHEATHER
 from custom_logger import CustomLogger
 
+import py360convert
+
 
 class ImageGenerator:
     def __init__(self, output_dir="Image"):
@@ -24,6 +26,9 @@ class ImageGenerator:
         while True :
             lat = random.randint(-9000000, 9000000) / 100000
             lon = random.randint(-18000000, 18000000) / 100000
+
+            #lat, lon = 39.90802, -76.6381
+
             self.logger.debug(f"Trying coordinates: {lat}, {lon}")
 
             result = StreetViewDownloader.find_nearest_panorama(lat=lat, lon=lon, API_KEY=self.google_key)
@@ -109,21 +114,33 @@ class ImageGenerator:
         self.logger.info("Weather image created")
 
     def download_flat_images(self, panoid):
-        images = []
-        for heading in [0, 90, 180, 270]:
-            fname = f"{panoid}_{heading}"
+        faces = {}
+        specs = [
+            ("front",  0,   0),
+            ("right",  90,  0),
+            ("back",   180, 0),
+            ("left",   270, 0),
+            ("up",     0,   90),
+            ("down",   0,  -90),
+        ]
+
+        for face_name, heading, pitch in specs:
+            fname = f"{panoid}_{face_name}"
             StreetViewDownloader.api_download(
                 panoid=panoid,
                 heading=heading,
+                pitch=pitch,
                 flat_dir=self.output_dir,
                 key=self.google_key,
-                width=1080,
-                height=1080,
+                width=640,
+                height=640,
                 fov=90,
                 fname=fname
             )
-            images.append(Image.open(f"{self.output_dir}/{fname}.jpg"))
-        return images
+            img = Image.open(f"{self.output_dir}/{fname}.jpg")
+            faces[face_name] = img
+
+        return faces
 
     def stitch_images(self, images):
         widths, heights = zip(*(img.size for img in images))
@@ -136,8 +153,24 @@ class ImageGenerator:
             x_offset += img.width
         return panorama
 
-    def create_panorama_versions(self, panorama):
-        panorama_np = np.array(panorama)
+    def create_panorama(self, panoid):
+        faces = {
+            'F': np.array(Image.open(f'Image/{panoid}_front.jpg')),
+            'R': np.array(Image.open(f'Image/{panoid}_right.jpg')),
+            'B': np.array(Image.open(f'Image/{panoid}_back.jpg')),
+            'L': np.array(Image.open(f'Image/{panoid}_left.jpg')),
+            'U': np.array(Image.open(f'Image/{panoid}_up.jpg')),
+            'D': np.array(Image.open(f'Image/{panoid}_down.jpg')),
+        }
+
+        H = faces['F'].shape[0]
+        equi = py360convert.c2e(faces, h=H, w=2*H, mode='bilinear', cube_format='dict')
+        equi_img = Image.fromarray(equi)
+        return np.array(equi_img)
+
+    def create_panorama_versions(self, panoid):
+        #panorama_np = np.array(panorama)
+        panorama_np = self.create_panorama(panoid)
         tiny = TinyPlanetTransformer(input_shape=panorama_np.shape, output_shape=(1080, 1080))
         
         result = tiny.warp(panorama_np, tiny.little_planet_map, output_shape=tiny.output_shape)
@@ -145,7 +178,7 @@ class ImageGenerator:
         out_img.save(os.path.join(self.output_dir, "Panorama.jpg"))
         self.logger.info("Panorama image created")
 
-        inv = np.rot90(panorama, 2)
+        inv = np.rot90(panorama_np, 2)
         tiny.input_shape = inv.shape
         result_inv = tiny.warp(inv, tiny.little_planet_map, output_shape=tiny.output_shape)
         out_img_inv = Image.fromarray((result_inv * 255).round().astype(np.uint8))
@@ -189,8 +222,8 @@ class ImageGenerator:
                     self.get_weather_image(lat, lon)
 
                 images = self.download_flat_images(panoid)
-                panorama = self.stitch_images(images)
-                self.create_panorama_versions(panorama)
+                #panorama = self.stitch_images(images)
+                self.create_panorama_versions(panoid)
                 
                 #best_img = self.create_best_image(panoid)
 

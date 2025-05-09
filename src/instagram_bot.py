@@ -15,6 +15,18 @@ from image_generator import ImageGenerator
 from custom_logger import CustomLogger
 from options import PUBLISH
 
+from typing import List
+
+def all_files_exist(paths: List[str]) -> bool:
+    """
+    Retourne True si tous les chemins de `paths` pointent vers un fichier existant,
+    sinon affiche la liste des fichiers manquants et retourne False.
+    """
+    missing = [p for p in paths if not os.path.isfile(p)]
+    if missing:
+        print("Fichiers non trouvés :", missing)
+        return False
+    return True
 
 class InstagramBot:
     SESSION_FILE = "insta_session.json"
@@ -58,10 +70,6 @@ class InstagramBot:
     def login_bot(self):
         self.logger.info("Starting Instagram login process")
         self.bot = Client()
-
-        if self.proxy:
-            self.bot.set_proxy(self.proxy)
-            print(f"Proxy enabled → {self.proxy}")
 
         try:
             # Attempt to load existing session
@@ -139,12 +147,14 @@ class InstagramBot:
                     album_path = [
                         "Image/Panorama.jpg",
                         "Image/PanoramaRevers.jpg",
-                        f"Image/{path}0.jpg",
-                        f"Image/{path}90.jpg",
-                        f"Image/{path}180.jpg",
-                        f"Image/{path}270.jpg"
+                        f"Image/{path}front.jpg",
+                        f"Image/{path}right.jpg",
+                        f"Image/{path}back.jpg",
+                        f"Image/{path}left.jpg"
                     ]
 
+                    # Check if all files exist before uploading
+                    #print(f"Checking if all files exist {all_files_exist(album_path)}")
                     self.upload_post(album_path, caption)
 
                     # save images to a folder

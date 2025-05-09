@@ -16,6 +16,7 @@ from custom_logger import CustomLogger
 class StreetViewDownloader:
     # class variables
     logger = CustomLogger(__name__)
+    API_KEY = os.getenv('GOOGLE_KEY')
 
     @staticmethod
     def find_nearest_panorama(lat, lon, radius=500000, API_KEY="Your_Api_Key"):
@@ -199,6 +200,139 @@ class StreetViewDownloader:
                 segment_length += 1
 
     @staticmethod
+    def _create_session(language: str = "en-US", region: str = "US") -> str:
+        """
+        Crée un token de session pour le Map Tiles API (Street View).
+        """
+        url = "https://tile.googleapis.com/v1/createSession"
+        params = {"key": StreetViewDownloader.API_KEY}
+        payload = {
+            "mapType": "streetview",
+            "language": language,
+            "region": region
+        }
+        headers = {"Content-Type": "application/json"}
+        resp = requests.post(url, params=params, json=payload, headers=headers)
+        resp.raise_for_status()
+        return resp.json()["session"]
+
+    @staticmethod
+    def _get_metadata(panoid: str, session_token: str):
+        """
+        Fetch panorama metadata (dimensions, tile size).
+        """
+        url = 'https://tile.googleapis.com/v1/streetview/metadata'
+        params = {
+            'key': StreetViewDownloader.API_KEY,
+            'session': session_token,
+            'panoId': panoid
+        }
+        resp = requests.get(url, params=params)
+        resp.raise_for_status()
+        return resp.json()
+
+    @staticmethod
+    def tiles_info(panoid: str, zoom: int = 5):
+        """
+        Compute tile coordinates and build tile URLs with the official Tiles API.
+        Returns a list of tuples (x, y, url).
+        """
+        session = StreetViewDownloader._create_session()
+        meta = StreetViewDownloader._get_metadata(panoid, session)
+        tile_w = meta['tileWidth']
+        tile_h = meta['tileHeight']
+        img_w = meta['imageWidth']
+        img_h = meta['imageHeight']
+        # number of tiles needed
+        nx = (img_w + tile_w - 1) // tile_w
+        ny = (img_h + tile_h - 1) // tile_h
+        tiles = []
+        for x, y in itertools.product(range(nx), range(ny)):
+            url = (
+                f"https://tile.googleapis.com/v1/streetview/tiles/{zoom}/{x}/{y}"
+                f"?session={session}&key={StreetViewDownloader.API_KEY}&panoId={panoid}"
+            )
+            tiles.append((x, y, url))
+        return tiles, tile_w, tile_h, img_w, img_h
+
+    @staticmethod
+    def download_panorama(panoid: str, zoom: int = 5, disp: bool = False) -> np.ndarray:
+        """
+        Download and assemble a Street View panorama using the official Tiles API.
+        Rafraîchit la session automatiquement si on tombe sur un 500.
+        """
+        # 1. Créer la session et récupérer les dimensions
+        session = StreetViewDownloader._create_session()
+        meta    = StreetViewDownloader._get_metadata(panoid, session)
+        tw, th  = meta['tileWidth'],  meta['tileHeight']
+        iw, ih  = meta['imageWidth'], meta['imageHeight']
+        nx, ny  = (iw + tw - 1)//tw,    (ih + th - 1)//th
+
+        panorama = Image.new('RGB', (iw, ih))
+        total = nx * ny
+
+        # template d’URL (on rebâtira la query string si on recrée la session)
+        url_tpl = (
+            "https://tile.googleapis.com/v1/streetview/tiles/{z}/{x}/{y}"
+            "?session={session}&key={key}&panoId={panoid}"
+        )
+
+        for idx, (x, y) in enumerate(itertools.product(range(nx), range(ny))):
+            if disp and idx % 20 == 0:
+                print(f"Downloading tile {idx+1}/{total} (z={zoom}, x={x}, y={y})")
+
+            last_exc = None
+            for attempt in range(3):
+                # (re)construire l’URL à chaque tentative, avec le bon token
+                url = url_tpl.format(
+                    z=zoom, x=x, y=y,
+                    session=session,
+                    key=StreetViewDownloader.API_KEY,
+                    panoid=panoid
+                )
+
+                try:
+                    r = requests.get(url, timeout=5)
+                    # si 500, on considére que la session a planté :
+                    if r.status_code == 500:
+                        raise requests.HTTPError(f"500 Server Error for {url}", response=r)
+
+                    r.raise_for_status()
+                    tile_img = Image.open(BytesIO(r.content))
+                    break
+
+                except requests.HTTPError as he:
+                    last_exc = he
+                    # uniquement sur 5xx, on recrée la session et on retente
+                    code = he.response.status_code if he.response is not None else None
+                    if code and 500 <= code < 600 and attempt < 2:
+                        if disp:
+                            print(f"  → HTTP 5xx détecté (code {code}), rafraîchissement session…")
+                        session = StreetViewDownloader._create_session()
+                        time.sleep(1)
+                        continue
+                    # sinon (4xx ou dernier essai), on abandonne la tuile
+                    tile_img = Image.new('RGB', (tw, th), (0, 0, 0))
+                    break
+
+                except Exception as e:
+                    last_exc = e
+                    print(f"  → Erreur de téléchargement : {e}")
+                    # sur timeout ou autre, on retente ; au dernier, tuile noire
+                    if attempt == 2:
+                        tile_img = Image.new('RGB', (tw, th), (0, 0, 0))
+
+            if last_exc and disp:
+                print(f"  → Erreur sur la tuile z={zoom},x={x},y={y} : {last_exc}")
+
+            panorama.paste(tile_img, (x * tw, y * th))
+
+        #  sauvegarde automatique
+        panorama.save('panorama.jpg', format='JPEG')
+        return np.array(panorama)
+
+
+    @staticmethod
     def download_panorama_v3(panoid, zoom=5, disp=False):
         '''
         v3: télécharge et assemble les tuiles d'une image Street View en mémoire.
@@ -211,7 +345,7 @@ class StreetViewDownloader:
         tile_height = 512
         img_w = 416 * (2 ** zoom)
         img_h = 416 * (2 ** (zoom - 1))
-        tiles = tiles_info(panoid, zoom=zoom)
+        tiles = StreetViewDownloader.tiles_info(panoid, zoom=zoom)
         valid_tiles = []
 
         for i, tile in enumerate(tiles):
@@ -264,7 +398,7 @@ class StreetViewDownloader:
         output:
             panorama image (uncropped)
         '''
-        tiles = tiles_info( panoid, zoom=zoom)
+        tiles = StreetViewDownloader.tiles_info( panoid, zoom=zoom)
         if not os.path.exists(directory):
             os.makedirs( directory )
         # function of download_tiles
@@ -295,7 +429,7 @@ class StreetViewDownloader:
             tile = Image.open(fname)
             panorama.paste(im=tile, box=(x*tile_width, y*tile_height))
             del tile
-        delete_tiles( tiles, directory )
+        StreetViewDownloader.delete_tiles( tiles, directory )
         return np.array(panorama)
 
     @staticmethod
@@ -311,7 +445,7 @@ class StreetViewDownloader:
         tile_width = 512
         tile_height = 512
         
-        tiles = tiles_info( panoid, zoom=zoom)
+        tiles = StreetViewDownloader.tiles_info( panoid, zoom=zoom)
         valid_tiles = []
         if not os.path.exists(directory):
             os.makedirs( directory )
