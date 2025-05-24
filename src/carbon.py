@@ -6,36 +6,44 @@ import matplotlib.pyplot as plt
 from instagrapi import Client
 from options import PUBLISH
 from custom_logger import CustomLogger
+import datetime
+from dateutil.relativedelta import relativedelta
+import matplotlib.dates as mdates
 
 SESSION_FILE = "insta_session.json"
 logger = CustomLogger(__name__)
 
-def create_co2_image(data_points, background_path, font_paths, output_path):
+def create_co2_image(data_points, dates, values, background_path, font_paths, output_path):
     """
-    Génère une image Instagram Story montrant l'évolution du taux de CO2.
+    Génère une image Instagram Story montrant l'évolution du taux de CO2 sur 10 ans et un texte descriptif.
 
     Parameters:
     - data_points: dict avec les clés '10ans', '1an', '2sem', '1sem' et leurs valeurs en ppm
+    - dates: liste de datetime.date pour la courbe
+    - values: liste de float correspondants aux ppm
     - background_path: chemin vers l'image de fond
     - font_paths: dict avec les chemins des polices 'title' et 'text'
     - output_path: chemin de sortie pour l'image générée
     """
-    # 1) Création du graphique
-    labels = ['10 ans', '1 an', '2 sem.', '1 sem.']
-    values = [data_points['10ans'], data_points['1an'], data_points['2sem'], data_points['1sem']]
-
+    # 1) Création du graphique en courbe
     fig, ax = plt.subplots(figsize=(4, 3), dpi=100, facecolor='none')
-    bars = ax.bar(labels, values, color='#FFA500')
-    for b in bars:
-        h = b.get_height()
-        ax.text(
-            b.get_x() + b.get_width() / 2,
-            h + 1,
-            f"{h:.1f}",
-            ha='center', va='bottom', color='white'
-        )
+    ax.plot(dates, values, linestyle='-', color='#FFA500', linewidth=1)  # ligne plus fine sans points
     ax.set_title('CO₂ (ppm)', color='white')
     ax.tick_params(colors='white')
+
+    # Configuration des labels des années : une année sur deux selon la parité de l'année actuelle
+    current_year = datetime.date.today().year
+    parity = current_year % 2  # 0 pour paire, 1 pour impaire
+    start_year = dates[0].year
+    end_year = dates[-1].year
+    # Déterminer la première année à afficher selon la parité
+    first_label_year = start_year if (start_year % 2) == parity else start_year + 1
+    tick_years = list(range(first_label_year, end_year + 1, 2))
+    tick_dates = [datetime.date(y, 1, 1) for y in tick_years]
+    ax.set_xticks(tick_dates)
+    ax.xaxis.set_major_formatter(mdates.DateFormatter('%Y'))
+
+    # Style des axes
     ax.spines['left'].set_color('white')
     ax.spines['bottom'].set_color('white')
     ax.spines['top'].set_visible(False)
@@ -69,13 +77,13 @@ def create_co2_image(data_points, background_path, font_paths, output_path):
 
     # Texte descriptif
     description = (
-        "\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n"
-        "Le taux de CO2 dans l'atmosphère :\n\n\n\n\n\n\n\n\n"
-        f"La semaine dernière  : {data_points['1sem']:.2f} ppm\n\n\n\n\n\n"
-        f"Il y a deux semaines  : {data_points['2sem']:.2f} ppm\n\n\n\n\n\n"
-        f"Il y a 1 an                   : {data_points['1an']:.2f} ppm\n\n\n\n\n\n"
-        f"Il y a 10 ans               : {data_points['10ans']:.2f} ppm\n\n\n\n\n\n\n\n\n"
-        "ppm = partie par million\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n"
+        "\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n"
+        "Le taux de CO2 dans l'atmosphère :\n\n\n\n\n\n"
+        f"La semaine dernière  : {data_points['1sem']:.2f} ppm\n\n\n\n"
+        f"Il y a deux semaines  : {data_points['2sem']:.2f} ppm\n\n\n\n"
+        f"Il y a 1 an                   : {data_points['1an']:.2f} ppm\n\n\n\n"
+        f"Il y a 10 ans               : {data_points['10ans']:.2f} ppm\n\n\n\n\n\n"
+        "ppm = partie par million\n\n\n\n\n\n\n\n\n\n"
     )
     lines_txt = description.splitlines()
     w0 = max(draw.textbbox((0,0), line, font=font_txt)[2] for line in lines_txt)
@@ -103,18 +111,40 @@ def create_co2_image(data_points, background_path, font_paths, output_path):
     bg.save(output_path)
     return output_path
 
-
 if __name__ == '__main__':
     # --- 1) Récupération des données CO₂ ---
     url = 'https://www.esrl.noaa.gov/gmd/webdata/ccgg/trends/co2/co2_weekly_mlo.txt'
     urllib.request.urlretrieve(url, 'co2.txt')
 
+    # Lecture et parsing
     with open('co2.txt') as f:
         lines = f.read().splitlines()
 
+    data = []
+    for line in lines:
+        if line.startswith('#'):
+            continue
+        parts = line.split()
+        try:
+            year, mon, day = map(int, parts[:3])
+            ppm = float(parts[4])
+        except:
+            continue
+        if ppm < 0:
+            continue
+        date = datetime.date(year, mon, day)
+        data.append((date, ppm))
+
+    # Filtrer les 10 dernières années
+    today = datetime.date.today()
+    ten_years_ago = today - relativedelta(years=10)
+    filtered = [(d, v) for d, v in data if d >= ten_years_ago]
+    dates, values = zip(*filtered)
+
+    # Points clés pour le texte
     last = lines[-1].split()
     prev = lines[-2].split()
-    data = {
+    data_points = {
         '1sem': float(last[4]),
         '2sem': float(prev[4]),
         '1an':  float(last[6]),
@@ -123,7 +153,9 @@ if __name__ == '__main__':
 
     # --- Génération et publication ---
     out_path = create_co2_image(
-        data,
+        data_points,
+        dates,
+        values,
         background_path='../assets/images/carbonBG.jpg',
         font_paths={
             'title': '../assets/fonts/Arial.ttf',
