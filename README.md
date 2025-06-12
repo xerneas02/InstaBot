@@ -120,7 +120,3 @@ py360convert
 ## Logging
 
 All logs are managed by the custom logger defined in `custom_logger.py`. Logs are output to both the console and the file `log.log`.
-
-## Disclaimer
-
-⚠️ **Caution:** Instagram's terms of service discourage automated posting and can flag or ban accounts that use bots. We strongly **do not recommend** using your **main Instagram account** with this tool. Consider creating a separate or test account to avoid risking your primary account being limited, blocked, or permanently banned.
