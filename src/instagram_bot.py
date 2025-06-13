@@ -144,6 +144,10 @@ class InstagramBot:
                 if PUBLISH:
                     self.login_bot()
 
+                    wait_minutes = random.randint(5, 20)
+                    self.logger.info(f"Attente de {wait_minutes} minutes avant publication.")
+                    sleep(wait_minutes * 60)
+
                     album_path = [
                         "Image/Panorama.jpg",
                         "Image/PanoramaRevers.jpg",
